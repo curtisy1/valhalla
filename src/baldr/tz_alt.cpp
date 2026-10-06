@@ -98,6 +98,7 @@
 
 #include <date/tz_private.h>
 
+#if !USE_OS_TZDB
 #include "date_time_africa.h"
 #include "date_time_antarctica.h"
 #include "date_time_asia.h"
@@ -108,6 +109,8 @@
 #include "date_time_leapseconds.h"
 #include "date_time_northamerica.h"
 #include "date_time_southamerica.h"
+#endif // !USE_OS_TZDB
+
 #include "date_time_windows_zones.h"
 
 #ifdef __APPLE__
@@ -427,11 +430,13 @@ get_tz_dir()
 static_assert(min_year <= max_year, "Configuration error");
 #endif
 
-#if 0
+#if USE_OS_TZDB
 static std::unique_ptr<tzdb> init_tzdb();
-#endif
+#endif // USE_OS_TZDB
 
+#if !USE_OS_TZDB
 static std::unique_ptr<tzdb> init_tzdb_strings();
+#endif // !USE_OS_TZDB
 
 tzdb_list::~tzdb_list()
 {
@@ -479,7 +484,15 @@ tzdb_list
 create_tzdb()
 {
     tzdb_list tz_db;
+
+#if USE_OS_TZDB
+    tzdb_list::undocumented_helper::push_front(tz_db, init_tzdb().release());
+#endif // USE_OS_TZDB
+
+#if !USE_OS_TZDB
     tzdb_list::undocumented_helper::push_front(tz_db, init_tzdb_strings().release());
+#endif // !USE_OS_TZDB
+
     return tz_db;
 }
 
@@ -3532,7 +3545,15 @@ reload_tzdb()
     if (!v.empty() && v == remote_version())
         return get_tzdb_list().front();
 #endif  // AUTO_DOWNLOAD
+
+#if USE_OS_TZDB
+    tzdb_list::undocumented_helper::push_front(get_tzdb_list(), init_tzdb().release());
+#endif // USE_OS_TZDB
+
+#if !USE_OS_TZDB
     tzdb_list::undocumented_helper::push_front(get_tzdb_list(), init_tzdb_strings().release());
+#endif // !USE_OS_TZDB
+
     return get_tzdb_list().front();
 }
 
@@ -4052,6 +4073,7 @@ load_timezone_mappings_from_xml_file()
 
 #endif  // _WIN32
 
+#if !USE_OS_TZDB
 static std::vector<std::string> get_tz_data_file_list() {
   std::vector<std::string> tz_data_file_list;
   tz_data_file_list.emplace_back(date_time_africa, date_time_africa + date_time_africa_len);
@@ -4071,7 +4093,9 @@ static std::vector<std::string> get_tz_data_file_list() {
                                  date_time_leapseconds + date_time_leapseconds_len);
   return tz_data_file_list;
 }
+#endif // !USE_OS_TZDB
 
+#if !USE_OS_TZDB
 static
 std::unique_ptr<tzdb>
 init_tzdb_strings()
@@ -4143,6 +4167,7 @@ init_tzdb_strings()
 
     return db;
 }
+#endif // !USE_OS_TZDB
 
 }  // namespace date
 

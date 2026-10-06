@@ -1,31 +1,41 @@
 ## Process the IANA Time Zone Database files
-set(tz_db_files africa antarctica asia australasia backward etcetera europe
-  northamerica southamerica leapseconds)
+# Option to use system timezone database instead of bundled IANA files
+option(USE_OS_TZDB "Use system timezone database (/usr/share/zoneinfo)" OFF)
 
-# Select make command based on platform
-if(WIN32)
-  set(MAKE_CMD nmake)
-else()
-  set(MAKE_CMD make)
+# If PREFER_EXTERNAL_DEPS is enabled, automatically enable USE_OS_TZDB
+if(PREFER_EXTERNAL_DEPS)
+    set(USE_OS_TZDB ON CACHE BOOL "Use system timezone when PREFER_EXTERNAL_DEPS" FORCE)
 endif()
 
-# Process the leap seconds file (it's in .gitignore of the tz repo)
-add_custom_command(OUTPUT ${VALHALLA_SOURCE_DIR}/third_party/tz/leapseconds
-COMMAND ${MAKE_CMD} leapseconds
-WORKING_DIRECTORY ${VALHALLA_SOURCE_DIR}/third_party/tz
-COMMENT "Compiling third_party/tz/leapseconds with awk"
-DEPENDS ${VALHALLA_SOURCE_DIR}/third_party/tz/leapseconds.awk)
+if(NOT USE_OS_TZDB)
+    set(tz_db_files africa antarctica asia australasia backward etcetera europe
+    northamerica southamerica leapseconds)
 
-foreach(tz_db_file ${tz_db_files})
-  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/date_time_${tz_db_file}.h
-    COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -P ${VALHALLA_SOURCE_DIR}/cmake/ValhallaBin2Header.cmake
-        ${VALHALLA_SOURCE_DIR}/third_party/tz/${tz_db_file}
-        ${CMAKE_CURRENT_BINARY_DIR}/date_time_${tz_db_file}.h
-        --variable-name date_time_${tz_db_file} --skip 1 --raw
-    WORKING_DIRECTORY ${VALHALLA_SOURCE_DIR}
-    COMMENT "Compiling third_party/tz/${tz_db_file} to date_time_${tz_db_file}.h"
-    DEPENDS ${VALHALLA_SOURCE_DIR}/third_party/tz/${tz_db_file} ${VALHALLA_SOURCE_DIR}/third_party/tz/leapseconds)
-endforeach()
+    # Select make command based on platform
+    if(WIN32)
+    set(MAKE_CMD nmake)
+    else()
+    set(MAKE_CMD make)
+    endif()
+
+    # Process the leap seconds file (it's in .gitignore of the tz repo)
+    add_custom_command(OUTPUT ${VALHALLA_SOURCE_DIR}/third_party/tz/leapseconds
+    COMMAND ${MAKE_CMD} leapseconds
+    WORKING_DIRECTORY ${VALHALLA_SOURCE_DIR}/third_party/tz
+    COMMENT "Compiling third_party/tz/leapseconds with awk"
+    DEPENDS ${VALHALLA_SOURCE_DIR}/third_party/tz/leapseconds.awk)
+
+    foreach(tz_db_file ${tz_db_files})
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/date_time_${tz_db_file}.h
+        COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -P ${VALHALLA_SOURCE_DIR}/cmake/ValhallaBin2Header.cmake
+            ${VALHALLA_SOURCE_DIR}/third_party/tz/${tz_db_file}
+            ${CMAKE_CURRENT_BINARY_DIR}/date_time_${tz_db_file}.h
+            --variable-name date_time_${tz_db_file} --skip 1 --raw
+        WORKING_DIRECTORY ${VALHALLA_SOURCE_DIR}
+        COMMENT "Compiling third_party/tz/${tz_db_file} to date_time_${tz_db_file}.h"
+        DEPENDS ${VALHALLA_SOURCE_DIR}/third_party/tz/${tz_db_file} ${VALHALLA_SOURCE_DIR}/third_party/tz/leapseconds)
+    endforeach()
+endif()
 
 # Process the windowsZones.xml file
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/date_time_windows_zones.h
@@ -93,17 +103,21 @@ set(sources
 
 list(APPEND sources
     #basic timezone stuff
-    ${CMAKE_CURRENT_BINARY_DIR}/date_time_africa.h
-    ${CMAKE_CURRENT_BINARY_DIR}/date_time_antarctica.h
-    ${CMAKE_CURRENT_BINARY_DIR}/date_time_asia.h
-    ${CMAKE_CURRENT_BINARY_DIR}/date_time_australasia.h
-    ${CMAKE_CURRENT_BINARY_DIR}/date_time_backward.h
-    ${CMAKE_CURRENT_BINARY_DIR}/date_time_etcetera.h
-    ${CMAKE_CURRENT_BINARY_DIR}/date_time_europe.h
-    ${CMAKE_CURRENT_BINARY_DIR}/date_time_leapseconds.h
-    ${CMAKE_CURRENT_BINARY_DIR}/date_time_northamerica.h
-    ${CMAKE_CURRENT_BINARY_DIR}/date_time_southamerica.h
     ${CMAKE_CURRENT_BINARY_DIR}/date_time_windows_zones.h)
+
+if(NOT USE_OS_TZDB)
+    list(APPEND sources
+        ${CMAKE_CURRENT_BINARY_DIR}/date_time_africa.h
+        ${CMAKE_CURRENT_BINARY_DIR}/date_time_antarctica.h
+        ${CMAKE_CURRENT_BINARY_DIR}/date_time_asia.h
+        ${CMAKE_CURRENT_BINARY_DIR}/date_time_australasia.h
+        ${CMAKE_CURRENT_BINARY_DIR}/date_time_backward.h
+        ${CMAKE_CURRENT_BINARY_DIR}/date_time_etcetera.h
+        ${CMAKE_CURRENT_BINARY_DIR}/date_time_europe.h
+        ${CMAKE_CURRENT_BINARY_DIR}/date_time_leapseconds.h
+        ${CMAKE_CURRENT_BINARY_DIR}/date_time_northamerica.h
+        ${CMAKE_CURRENT_BINARY_DIR}/date_time_southamerica.h)
+endif()
 
 list(APPEND sources_with_warnings
     tz_alt.cpp)
